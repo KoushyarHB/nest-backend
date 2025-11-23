@@ -8,10 +8,10 @@ export class AppService {
     private readonly dummyService: DummyService,
     private readonly loggerService: LoggerService,
   ) {}
+
   getHello(): string {
     const dummifiedMessage = this.dummyService.dummifyMessage('Hello World!');
     const formattedMessage = this.loggerService.log(dummifiedMessage);
-    console.log(formattedMessage);
     return formattedMessage;
   }
 }
