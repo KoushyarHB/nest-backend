@@ -11,6 +11,13 @@ import {
   Post,
   BadRequestException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 import { TasksService } from './tasks.service';
 import type { ITask } from './task.model';
 import { CreateTaskDto } from './create-task.dto';
@@ -19,21 +26,31 @@ import { FindOneParams } from './find-one.params';
 import { UpdateTaskDto } from './update-task.dto';
 import { WrongTaskStatusException } from './exceptions/wrong-task-status.exception';
 
+@ApiTags('Tasks API')
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Get all tasks' })
+  @ApiResponse({ status: 200, description: 'Returns all tasks' })
   public findAll(): ITask[] {
     return this.tasksService.findAll();
   }
 
   @Get('/:id')
+  @ApiOperation({ summary: 'Get a task by ID' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiResponse({ status: 200, description: 'Returns the task' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   public findOne(@Param() params: FindOneParams): ITask {
     return this.findOneOrFail(params.id);
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create a new task' })
+  @ApiBody({ type: CreateTaskDto })
+  @ApiResponse({ status: 201, description: 'Task created successfully' })
   public create(@Body() createTaskDto: CreateTaskDto) {
     this.tasksService.create(createTaskDto);
   }
@@ -48,6 +65,12 @@ export class TasksController {
   // }
 
   @Patch('/:id')
+  @ApiOperation({ summary: 'Update a task' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiBody({ type: UpdateTaskDto })
+  @ApiResponse({ status: 200, description: 'Task updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid task status transition' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   public updateTaskStatus(
     @Param() params: FindOneParams,
     @Body() updateTaskDto: UpdateTaskDto,
@@ -65,6 +88,10 @@ export class TasksController {
 
   @Delete('/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a task' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiResponse({ status: 204, description: 'Task deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
   public delete(@Param() params: FindOneParams): void {
     this.findOneOrFail(params.id);
     this.tasksService.delete(params.id);
