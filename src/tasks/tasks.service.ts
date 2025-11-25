@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ITask } from './task.model';
+import { ITask, TaskStatus } from './task.model';
 import { CreateTaskDto } from './create-task.dto';
 import { randomUUID } from 'crypto';
 import { UpdateTaskStatusDto } from './update-task-status.dto';
 import { UpdateTaskDto } from './update-task.dto';
+import { WrongTaskStatusException } from './exceptions/wrong-task-status.exception';
 
 @Injectable()
 export class TasksService {
@@ -28,6 +29,11 @@ export class TasksService {
     if (!task) {
       throw new NotFoundException(`Task with ID "${id}" not found`);
     }
+    if (
+      !this.isValidStatusTransition(task.status, updateTaskStatusDto.status)
+    ) {
+      throw new WrongTaskStatusException();
+    }
     task.status = updateTaskStatusDto.status;
     return task;
   }
@@ -42,8 +48,28 @@ export class TasksService {
     //     task[key] = updateTaskDto[key];
     //   }
     // });
+    if (
+      updateTaskDto.status &&
+      !this.isValidStatusTransition(task.status, updateTaskDto.status)
+    ) {
+      throw new WrongTaskStatusException();
+    }
     Object.assign(task, updateTaskDto);
     return task;
+  }
+
+  private isValidStatusTransition(
+    currentStatus: TaskStatus,
+    newStatus: TaskStatus,
+  ): boolean {
+    const statusOrder = [
+      TaskStatus.OPEN,
+      TaskStatus.IN_PROGRESS,
+      TaskStatus.DONE,
+    ];
+    const currentIndex = statusOrder.indexOf(currentStatus);
+    const newIndex = statusOrder.indexOf(newStatus);
+    return newIndex >= currentIndex;
   }
 
   delete(id: string): void {
