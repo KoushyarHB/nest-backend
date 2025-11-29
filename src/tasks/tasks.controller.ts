@@ -19,12 +19,11 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { TasksService } from './tasks.service';
-import type { ITask } from './task.model';
 import { CreateTaskDto } from './create-task.dto';
 import { FindOneParams } from './find-one.params';
-// import { UpdateTaskStatusDto } from './update-task-status.dto';
 import { UpdateTaskDto } from './update-task.dto';
 import { WrongTaskStatusException } from './exceptions/wrong-task-status.exception';
+import { Task } from './task.entity';
 
 @ApiTags('Tasks API')
 @Controller('tasks')
@@ -34,8 +33,8 @@ export class TasksController {
   @Get()
   @ApiOperation({ summary: 'Get all tasks' })
   @ApiResponse({ status: 200, description: 'Returns all tasks' })
-  public findAll(): ITask[] {
-    return this.tasksService.findAll();
+  public async findAll(): Promise<Task[]> {
+    return await this.tasksService.findAll();
   }
 
   @Get('/:id')
@@ -43,26 +42,17 @@ export class TasksController {
   @ApiParam({ name: 'id', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Returns the task' })
   @ApiResponse({ status: 404, description: 'Task not found' })
-  public findOne(@Param() params: FindOneParams): ITask {
-    return this.findOneOrFail(params.id);
+  public async findOne(@Param() params: FindOneParams): Promise<Task> {
+    return await this.findOneOrFail(params.id);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a new task' })
   @ApiBody({ type: CreateTaskDto })
   @ApiResponse({ status: 201, description: 'Task created successfully' })
-  public create(@Body() createTaskDto: CreateTaskDto) {
-    this.tasksService.create(createTaskDto);
+  public async create(@Body() createTaskDto: CreateTaskDto) {
+    await this.tasksService.create(createTaskDto);
   }
-
-  // @Patch('/:id/status')
-  // public updateTaskStatus(
-  //   @Param() params: FindOneParams,
-  //   @Body() body: UpdateTaskStatusDto,
-  // ): ITask {
-  //   this.findOneOrFail(params.id);
-  //   return this.tasksService.updateStatus(params.id, body);
-  // }
 
   @Patch('/:id')
   @ApiOperation({ summary: 'Update a task' })
@@ -71,13 +61,13 @@ export class TasksController {
   @ApiResponse({ status: 200, description: 'Task updated successfully' })
   @ApiResponse({ status: 400, description: 'Invalid task status transition' })
   @ApiResponse({ status: 404, description: 'Task not found' })
-  public updateTaskStatus(
+  public async updateTaskStatus(
     @Param() params: FindOneParams,
     @Body() updateTaskDto: UpdateTaskDto,
-  ): ITask {
-    this.findOneOrFail(params.id);
+  ): Promise<Task> {
+    const task = await this.findOneOrFail(params.id);
     try {
-      return this.tasksService.update(params.id, updateTaskDto);
+      return await this.tasksService.update(task, updateTaskDto);
     } catch (error) {
       if (error instanceof WrongTaskStatusException) {
         throw new BadRequestException([error.message]);
@@ -92,13 +82,13 @@ export class TasksController {
   @ApiParam({ name: 'id', description: 'Task ID' })
   @ApiResponse({ status: 204, description: 'Task deleted successfully' })
   @ApiResponse({ status: 404, description: 'Task not found' })
-  public delete(@Param() params: FindOneParams): void {
-    this.findOneOrFail(params.id);
-    this.tasksService.delete(params.id);
+  public async delete(@Param() params: FindOneParams): Promise<void> {
+    const task = await this.findOneOrFail(params.id);
+    await this.tasksService.delete(task);
   }
 
-  private findOneOrFail(id: string): ITask {
-    const task = this.tasksService.findOne(id);
+  private async findOneOrFail(id: string): Promise<Task> {
+    const task = await this.tasksService.findOne(id);
     if (!task) {
       throw new NotFoundException();
     }

@@ -1,53 +1,32 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { ITask, TaskStatus } from './task.model';
+import { Injectable } from '@nestjs/common';
+import { TaskStatus } from './task.model';
 import { CreateTaskDto } from './create-task.dto';
-import { randomUUID } from 'crypto';
-import { UpdateTaskStatusDto } from './update-task-status.dto';
 import { UpdateTaskDto } from './update-task.dto';
 import { WrongTaskStatusException } from './exceptions/wrong-task-status.exception';
+import { Repository } from 'typeorm';
+import { Task } from './task.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class TasksService {
-  private tasks: ITask[] = [];
+  constructor(
+    @InjectRepository(Task)
+    private readonly tasksRepository: Repository<Task>,
+  ) {}
 
-  findAll(): ITask[] {
-    return this.tasks;
+  async findAll(): Promise<Task[]> {
+    return await this.tasksRepository.find();
   }
 
-  findOne(id: string): ITask | undefined {
-    return this.tasks.find((t) => t.id === id);
+  async findOne(id: string): Promise<Task | null> {
+    return await this.tasksRepository.findOneBy({ id });
   }
 
-  create(createTaskDto: CreateTaskDto): ITask {
-    const task: ITask = { id: randomUUID(), ...createTaskDto };
-    this.tasks.push(task);
-    return task;
+  async create(createTaskDto: CreateTaskDto): Promise<Task> {
+    return await this.tasksRepository.save(createTaskDto);
   }
 
-  updateStatus(id: string, updateTaskStatusDto: UpdateTaskStatusDto): ITask {
-    const task = this.tasks.find((t) => t.id === id);
-    if (!task) {
-      throw new NotFoundException(`Task with ID "${id}" not found`);
-    }
-    if (
-      !this.isValidStatusTransition(task.status, updateTaskStatusDto.status)
-    ) {
-      throw new WrongTaskStatusException();
-    }
-    task.status = updateTaskStatusDto.status;
-    return task;
-  }
-
-  update(id: string, updateTaskDto: UpdateTaskDto): ITask {
-    const task = this.tasks.find((t) => t.id === id);
-    if (!task) {
-      throw new NotFoundException(`Task with ID "${id}" not found`);
-    }
-    // Object.keys(task).forEach((key) => {
-    //   if (ArrayFromObject(updateTaskDto).includes(key)) {
-    //     task[key] = updateTaskDto[key];
-    //   }
-    // });
+  async update(task: Task, updateTaskDto: UpdateTaskDto): Promise<Task> {
     if (
       updateTaskDto.status &&
       !this.isValidStatusTransition(task.status, updateTaskDto.status)
@@ -55,7 +34,7 @@ export class TasksService {
       throw new WrongTaskStatusException();
     }
     Object.assign(task, updateTaskDto);
-    return task;
+    return await this.tasksRepository.save(task);
   }
 
   private isValidStatusTransition(
@@ -72,10 +51,7 @@ export class TasksService {
     return newIndex >= currentIndex;
   }
 
-  delete(id: string): void {
-    const index = this.tasks.findIndex((t) => t.id === id);
-    if (index !== -1) {
-      this.tasks.splice(index, 1);
-    }
+  async delete(task: Task): Promise<void> {
+    await this.tasksRepository.delete(task);
   }
 }
