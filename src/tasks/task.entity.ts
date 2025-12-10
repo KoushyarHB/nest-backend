@@ -28,9 +28,17 @@ export class Task {
   })
   status: TaskStatus;
 
-  @Column()
-  userId: string;
+  // @Column()
+  // userId: string;
 
-  @ManyToOne(() => User, (user) => user.tasks, { nullable: false })
+  // Why do we use arrow functions?
+  // To avoid circular import crashes
+  // The arrow function () => User is just a function that returns the User class — it is not executed immediately when the file is imported. This helps us avoid circular imports crash.
+
+  // @ManyToMany(() => User, (user) => user.tasks)
+  // @JoinTable()
+  // assignees: User[];
+
+  @ManyToOne(() => User, (user) => user.tasks)
   user: User;
 }

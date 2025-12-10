@@ -1,6 +1,7 @@
-import { IsNotEmpty, IsString, IsEnum, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsUUID, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TaskStatus } from './task.model';
+import { User } from 'src/users/user.entity';
 
 export class CreateTaskDto {
   @ApiProperty({
@@ -28,11 +29,19 @@ export class CreateTaskDto {
   @IsEnum(TaskStatus)
   status: TaskStatus;
 
+  // @ApiProperty({
+  //   description: 'Array of user IDs to assign',
+  //   example: ['user-uuid-1', 'user-uuid-2'],
+  //   isArray: true,
+  // })
+  // @IsArray()
+  // @IsUUID('all', { each: true })
+  // assignees: string[];
+
   @ApiProperty({
-    description: 'Id of the user owning the task (temporary)',
+    description: 'The user ID of the user owning the task',
     example: '750afea3-bbd8-47ac-90a8-d4eee10ac97b',
   })
-  @IsNotEmpty()
   @IsUUID()
   userId: string;
 }

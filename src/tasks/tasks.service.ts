@@ -3,28 +3,59 @@ import { TaskStatus } from './task.model';
 import { CreateTaskDto } from './create-task.dto';
 import { UpdateTaskDto } from './update-task.dto';
 import { WrongTaskStatusException } from './exceptions/wrong-task-status.exception';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Task } from './task.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { User } from 'src/users/user.entity';
 
 @Injectable()
 export class TasksService {
   constructor(
     @InjectRepository(Task)
     private readonly tasksRepository: Repository<Task>,
+    // @InjectRepository(User)
+    // private readonly usersRepository: Repository<User>,
   ) {}
 
   async findAll(): Promise<Task[]> {
-    return await this.tasksRepository.find();
+    return await this.tasksRepository.find({ relations: ['user'] });
   }
 
   async findOne(id: string): Promise<Task | null> {
-    return await this.tasksRepository.findOneBy({ id });
+    return await this.tasksRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
   }
 
+  // async create(createTaskDto: CreateTaskDto): Promise<Task> {
+  //   const { assignees, ...taskData } = createTaskDto;
+  //   const task = this.tasksRepository.create(taskData);
+  //   if (assignees && assignees.length > 0) {
+  //     const users = await this.usersRepository.findBy({ id: In(assignees) });
+  //     task.assignees = users;
+  //   }
+  //   return this.tasksRepository.save(task);
+  // }
+
   async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    return await this.tasksRepository.save(createTaskDto);
+    const { userId, ...taskData } = createTaskDto;
+    const task = this.tasksRepository.create(taskData);
+    task.user = { id: userId } as User;
+    return this.tasksRepository.save(task);
   }
+
+  // Commented out cuz it does not handle relations
+  // async update(task: Task, updateTaskDto: UpdateTaskDto): Promise<Task> {
+  //   if (
+  //     updateTaskDto.status &&
+  //     !this.isValidStatusTransition(task.status, updateTaskDto.status)
+  //   ) {
+  //     throw new WrongTaskStatusException();
+  //   }
+  //   Object.assign(task, updateTaskDto); //this only updates primitive fields, not the relations
+  //   return await this.tasksRepository.save(task);
+  // }
 
   async update(task: Task, updateTaskDto: UpdateTaskDto): Promise<Task> {
     if (
@@ -33,8 +64,16 @@ export class TasksService {
     ) {
       throw new WrongTaskStatusException();
     }
-    Object.assign(task, updateTaskDto);
-    return await this.tasksRepository.save(task);
+    if (updateTaskDto.userId !== undefined) {
+      task.user = { id: updateTaskDto.userId } as User;
+    }
+    Object.assign(task, {
+      title: updateTaskDto.title,
+      description: updateTaskDto.description,
+      status: updateTaskDto.status,
+    });
+
+    return this.tasksRepository.save(task);
   }
 
   private isValidStatusTransition(
