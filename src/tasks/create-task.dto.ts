@@ -10,13 +10,7 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TaskStatus } from './task.model';
 import { Type } from 'class-transformer';
-
-class CreateLabelDto {
-  @ApiProperty({ example: 'course', description: 'Name of the label' })
-  @IsNotEmpty()
-  @IsString()
-  name: string;
-}
+import { CreateTaskLabelDto } from './create-task-label.dto';
 
 export class CreateTaskDto {
   @ApiProperty({
@@ -61,13 +55,13 @@ export class CreateTaskDto {
   userId: string;
 
   @ApiPropertyOptional({
-    type: [CreateLabelDto],
+    type: [CreateTaskLabelDto],
     example: [{ name: 'course' }, { name: 'nestjs' }, { name: 'important' }],
     description: 'Array of labels (optional)',
   })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateLabelDto)
-  labels?: CreateLabelDto[];
+  @Type(() => CreateTaskLabelDto)
+  labels?: CreateTaskLabelDto[];
 }

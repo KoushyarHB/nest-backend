@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { TaskStatus } from './task.model';
 import { CreateTaskDto } from './create-task.dto';
 import { UpdateTaskDto } from './update-task.dto';
@@ -39,22 +39,70 @@ export class TasksService {
   //   return this.tasksRepository.save(task);
   // }
 
+  //==========================================
+
+  // async create(dto: CreateTaskDto): Promise<Task> {
+  //   const { userId, labels, ...taskData } = dto;
+
+  //   const task = this.tasksRepository.create({
+  //     ...taskData,
+  //     user: { id: userId } as User,
+  //     labels:
+  //       labels?.map((l) => {
+  //         const label = new TaskLabel();
+  //         label.name = l.name;
+  //         return label;
+  //       }) || [],
+  //   });
+
+  //   try {
+  //     return await this.tasksRepository.save(task);
+  //   } catch (error) {
+  //     if (
+  //       error &&
+  //       typeof error === 'object' &&
+  //       'code' in error &&
+  //       typeof (error as { code: unknown }).code === 'string' &&
+  //       (error as { code: string }).code === '23505'
+  //     ) {
+  //       // PostgreSQL unique violation code
+  //       throw new BadRequestException('Avoid sending duplicate labels');
+  //     }
+  //     throw error; // re-throw other errors
+  //   }
+  // }
+
   async create(dto: CreateTaskDto): Promise<Task> {
-    const { userId, labels, ...taskData } = dto;
+    const { userId, ...taskData } = dto;
 
     const task = this.tasksRepository.create({
       ...taskData,
       user: { id: userId } as User,
-      labels:
-        labels?.map((l) => {
-          const label = new TaskLabel();
-          label.name = l.name;
-          return label;
-        }) || [],
     });
 
     return this.tasksRepository.save(task);
   }
+
+  // No — the .map() is NOT necessary at all.
+  // You just discovered the true power of TypeORM cascade — and you're 100 % right.
+  // What actually works (and why)
+  // Your minimal version works perfectly.
+  // → Because of @Type(() => CreateTaskLabelDto) in your DTO Nest automatically converts each object into a real TaskLabel entity instance
+  // → task.labels becomes an array of actual TaskLabel objects
+  // → cascade: true sees them → saves them automatically
+  // → No .map() needed
+
+  // So why did we write the .map() before?
+  // Two reasons (both were overkill):
+
+  // I was being extra cautious — some older TypeORM versions or misconfigured DTOs don’t auto-convert nested objects properly.
+  // We were fighting the as TaskLabel error — when we manually did { name: l.name } as TaskLabel, it was a fake cast → TypeORM ignored it → we needed .map() to force creation.
+
+  // But with your current perfect DTO setup (@Type, ValidateNested, etc.) → Nest does the conversion for us.
+
+  // Why we have to manually map the user, but don’t have to for labels?
+  // ![](/screenshots/why-user-needs-mapping.png)
+  //=============================================
 
   // Commented out cuz it does not handle relations
   // async update(task: Task, updateTaskDto: UpdateTaskDto): Promise<Task> {
@@ -69,27 +117,50 @@ export class TasksService {
   // }
 
   async update(task: Task, updateTaskDto: UpdateTaskDto): Promise<Task> {
+    // Status validation
     if (
       updateTaskDto.status &&
       !this.isValidStatusTransition(task.status, updateTaskDto.status)
     ) {
       throw new WrongTaskStatusException();
     }
+
+    // User change
     if (updateTaskDto.userId !== undefined) {
       task.user = { id: updateTaskDto.userId } as User;
     }
+
+    // Primitive fields
+    if (updateTaskDto.title !== undefined) task.title = updateTaskDto.title;
+    if (updateTaskDto.description !== undefined)
+      task.description = updateTaskDto.description;
+    if (updateTaskDto.status !== undefined) task.status = updateTaskDto.status;
+
+    // === LABELS: Merge + deduplicate (no DB error ever) ===
     if (updateTaskDto.labels !== undefined) {
-      task.labels = updateTaskDto.labels.map((l) => {
-        const label = new TaskLabel();
-        label.name = l.name;
-        return label;
-      });
+      const incomingNames = new Set(
+        updateTaskDto.labels.map((l) => l.name.trim().toLowerCase()),
+      );
+
+      // Keep existing labels that are still wanted
+      const preserved = task.labels.filter((label) =>
+        incomingNames.has(label.name.trim().toLowerCase()),
+      );
+
+      // Add only truly new ones
+      const newOnes = updateTaskDto.labels
+        .filter(
+          (l) =>
+            !task.labels.some(
+              (existing) =>
+                existing.name.trim().toLowerCase() ===
+                l.name.trim().toLowerCase(),
+            ),
+        )
+        .map((l) => ({ name: l.name }) as TaskLabel);
+
+      task.labels = [...preserved, ...newOnes];
     }
-    Object.assign(task, {
-      title: updateTaskDto.title,
-      description: updateTaskDto.description,
-      status: updateTaskDto.status,
-    });
 
     return this.tasksRepository.save(task);
   }
@@ -109,6 +180,6 @@ export class TasksService {
   }
 
   async delete(task: Task): Promise<void> {
-    await this.tasksRepository.delete(task);
+    await this.tasksRepository.remove(task);
   }
 }

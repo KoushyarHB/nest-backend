@@ -49,6 +49,9 @@ export class Task {
   @ManyToOne(() => User, (user) => user.tasks)
   user: User;
 
-  @OneToMany(() => TaskLabel, (taskLabel) => taskLabel.task, { cascade: true })
+  @OneToMany(() => TaskLabel, (taskLabel) => taskLabel.task, {
+    cascade: true,
+    orphanRemoval: true,
+  } as { cascade: boolean; orphanRemoval: boolean })
   labels: TaskLabel[];
 }
