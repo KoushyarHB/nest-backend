@@ -1,7 +1,22 @@
-import { IsNotEmpty, IsString, IsEnum, IsUUID, IsArray } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsNotEmpty,
+  IsString,
+  IsEnum,
+  IsUUID,
+  IsArray,
+  IsOptional,
+  ValidateNested,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TaskStatus } from './task.model';
-import { User } from 'src/users/user.entity';
+import { Type } from 'class-transformer';
+
+class CreateLabelDto {
+  @ApiProperty({ example: 'course', description: 'Name of the label' })
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+}
 
 export class CreateTaskDto {
   @ApiProperty({
@@ -44,4 +59,15 @@ export class CreateTaskDto {
   })
   @IsUUID()
   userId: string;
+
+  @ApiPropertyOptional({
+    type: [CreateLabelDto],
+    example: [{ name: 'course' }, { name: 'nestjs' }, { name: 'important' }],
+    description: 'Array of labels (optional)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateLabelDto)
+  labels?: CreateLabelDto[];
 }

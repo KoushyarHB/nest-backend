@@ -7,6 +7,7 @@ import { Repository, In } from 'typeorm';
 import { Task } from './task.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/user.entity';
+import { TaskLabel } from './task-label.entity';
 
 @Injectable()
 export class TasksService {
@@ -18,13 +19,13 @@ export class TasksService {
   ) {}
 
   async findAll(): Promise<Task[]> {
-    return await this.tasksRepository.find({ relations: ['user'] });
+    return await this.tasksRepository.find({ relations: ['user', 'labels'] });
   }
 
   async findOne(id: string): Promise<Task | null> {
     return await this.tasksRepository.findOne({
       where: { id },
-      relations: ['user'],
+      relations: ['user', 'labels'],
     });
   }
 
@@ -38,10 +39,20 @@ export class TasksService {
   //   return this.tasksRepository.save(task);
   // }
 
-  async create(createTaskDto: CreateTaskDto): Promise<Task> {
-    const { userId, ...taskData } = createTaskDto;
-    const task = this.tasksRepository.create(taskData);
-    task.user = { id: userId } as User;
+  async create(dto: CreateTaskDto): Promise<Task> {
+    const { userId, labels, ...taskData } = dto;
+
+    const task = this.tasksRepository.create({
+      ...taskData,
+      user: { id: userId } as User,
+      labels:
+        labels?.map((l) => {
+          const label = new TaskLabel();
+          label.name = l.name;
+          return label;
+        }) || [],
+    });
+
     return this.tasksRepository.save(task);
   }
 
@@ -66,6 +77,13 @@ export class TasksService {
     }
     if (updateTaskDto.userId !== undefined) {
       task.user = { id: updateTaskDto.userId } as User;
+    }
+    if (updateTaskDto.labels !== undefined) {
+      task.labels = updateTaskDto.labels.map((l) => {
+        const label = new TaskLabel();
+        label.name = l.name;
+        return label;
+      });
     }
     Object.assign(task, {
       title: updateTaskDto.title,
