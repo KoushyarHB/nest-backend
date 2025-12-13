@@ -117,7 +117,53 @@ export class TasksService {
   //   return await this.tasksRepository.save(task);
   // }
 
-  async update(task: Task, updateTaskDto: UpdateTaskDto): Promise<Task> {
+  // async update(task: Task, updateTaskDto: UpdateTaskDto): Promise<Task> {
+  //   if (
+  //     updateTaskDto.status &&
+  //     !this.isValidStatusTransition(task.status, updateTaskDto.status)
+  //   ) {
+  //     throw new WrongTaskStatusException();
+  //   }
+
+  //   if (updateTaskDto.userId !== undefined) {
+  //     task.user = { id: updateTaskDto.userId } as User;
+  //   }
+
+  //   if (updateTaskDto.title !== undefined) task.title = updateTaskDto.title;
+  //   if (updateTaskDto.description !== undefined)
+  //     task.description = updateTaskDto.description;
+  //   if (updateTaskDto.status !== undefined) task.status = updateTaskDto.status;
+
+  //   // === LABELS: Merge + deduplicate (no DB error ever) ===
+  //   if (updateTaskDto.labels !== undefined) {
+  //     const incomingNames = new Set(
+  //       updateTaskDto.labels.map((l) => l.name.trim().toLowerCase()),
+  //     );
+
+  //     // Keep existing labels that are still wanted
+  //     const preserved = task.labels.filter((label) =>
+  //       incomingNames.has(label.name.trim().toLowerCase()),
+  //     );
+
+  //     // Add only truly new ones
+  //     const newOnes = updateTaskDto.labels
+  //       .filter(
+  //         (l) =>
+  //           !task.labels.some(
+  //             (existing) =>
+  //               existing.name.trim().toLowerCase() ===
+  //               l.name.trim().toLowerCase(),
+  //           ),
+  //       )
+  //       .map((l) => ({ name: l.name }) as TaskLabel);
+
+  //     task.labels = [...preserved, ...newOnes];
+  //   }
+
+  //   return this.tasksRepository.save(task);
+  // }
+
+  async update(task: Task, updateTaskDto: UpdateTaskDto) {
     if (
       updateTaskDto.status &&
       !this.isValidStatusTransition(task.status, updateTaskDto.status)
@@ -125,26 +171,34 @@ export class TasksService {
       throw new WrongTaskStatusException();
     }
 
+    Object.assign(task, {
+      ...(updateTaskDto.title !== undefined && { title: updateTaskDto.title }),
+      ...(updateTaskDto.description !== undefined && {
+        description: updateTaskDto.description,
+      }),
+      ...(updateTaskDto.status !== undefined && {
+        status: updateTaskDto.status,
+      }),
+    });
+
     if (updateTaskDto.userId !== undefined) {
       task.user = { id: updateTaskDto.userId } as User;
     }
 
-    if (updateTaskDto.title !== undefined) task.title = updateTaskDto.title;
-    if (updateTaskDto.description !== undefined)
-      task.description = updateTaskDto.description;
-    if (updateTaskDto.status !== undefined) task.status = updateTaskDto.status;
-
-    // === LABELS: Merge + deduplicate (no DB error ever) ===
     if (updateTaskDto.labels !== undefined) {
+      // Does the job but does not satidfy the duplicate constraint
+      // task.labels = updateTaskDto.labels.map(
+      //   (l) => ({ name: l.name }) as TaskLabel,
+      // );
+
+      // Doing the job of satisfying uniqueness
       const incomingNames = new Set(
         updateTaskDto.labels.map((l) => l.name.trim().toLowerCase()),
       );
-
       // Keep existing labels that are still wanted
       const preserved = task.labels.filter((label) =>
         incomingNames.has(label.name.trim().toLowerCase()),
       );
-
       // Add only truly new ones
       const newOnes = updateTaskDto.labels
         .filter(
@@ -156,13 +210,10 @@ export class TasksService {
             ),
         )
         .map((l) => ({ name: l.name }) as TaskLabel);
-
       task.labels = [...preserved, ...newOnes];
     }
-
-    return this.tasksRepository.save(task);
+    return await this.tasksRepository.save(task);
   }
-
   //=============================================================================
 
   private isValidStatusTransition(
