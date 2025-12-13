@@ -51,7 +51,6 @@ export class Task {
 
   @OneToMany(() => TaskLabel, (taskLabel) => taskLabel.task, {
     cascade: true,
-    orphanRemoval: true,
-  } as { cascade: boolean; orphanRemoval: boolean })
+  })
   labels: TaskLabel[];
 }

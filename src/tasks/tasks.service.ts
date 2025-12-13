@@ -39,7 +39,7 @@ export class TasksService {
   //   return this.tasksRepository.save(task);
   // }
 
-  //==========================================
+  //=============================================================================
 
   // async create(dto: CreateTaskDto): Promise<Task> {
   //   const { userId, labels, ...taskData } = dto;
@@ -102,7 +102,8 @@ export class TasksService {
 
   // Why we have to manually map the user, but don’t have to for labels?
   // ![](/screenshots/why-user-needs-mapping.png)
-  //=============================================
+
+  //=============================================================================
 
   // Commented out cuz it does not handle relations
   // async update(task: Task, updateTaskDto: UpdateTaskDto): Promise<Task> {
@@ -117,7 +118,6 @@ export class TasksService {
   // }
 
   async update(task: Task, updateTaskDto: UpdateTaskDto): Promise<Task> {
-    // Status validation
     if (
       updateTaskDto.status &&
       !this.isValidStatusTransition(task.status, updateTaskDto.status)
@@ -125,12 +125,10 @@ export class TasksService {
       throw new WrongTaskStatusException();
     }
 
-    // User change
     if (updateTaskDto.userId !== undefined) {
       task.user = { id: updateTaskDto.userId } as User;
     }
 
-    // Primitive fields
     if (updateTaskDto.title !== undefined) task.title = updateTaskDto.title;
     if (updateTaskDto.description !== undefined)
       task.description = updateTaskDto.description;
@@ -164,6 +162,8 @@ export class TasksService {
 
     return this.tasksRepository.save(task);
   }
+
+  //=============================================================================
 
   private isValidStatusTransition(
     currentStatus: TaskStatus,
