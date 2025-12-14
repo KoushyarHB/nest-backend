@@ -8,6 +8,7 @@ import { Task } from './task.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/user.entity';
 import { TaskLabel } from './task-label.entity';
+import { CreateTaskLabelDto } from './create-task-label.dto';
 
 @Injectable()
 export class TasksService {
@@ -214,6 +215,26 @@ export class TasksService {
     }
     return await this.tasksRepository.save(task);
   }
+
+  //=============================================================================
+
+  async addLabels(task: Task, labels: CreateTaskLabelDto[]) {
+    const labelEntities = labels.map((l) => ({ name: l.name }) as TaskLabel);
+    const newLabelEntities = labelEntities.filter(
+      (l) => !task.labels.some((tl) => tl.name === l.name),
+    );
+    task.labels = [...task.labels, ...newLabelEntities];
+    return await this.tasksRepository.save(task);
+  }
+
+  async deleteLabels(task: Task, labels: CreateTaskLabelDto[]) {
+    const labelEntities = labels.map((l) => ({ name: l.name }) as TaskLabel);
+    task.labels = task.labels.filter(
+      (l) => !labelEntities.some((tl) => tl.name === l.name),
+    );
+    await this.tasksRepository.save(task);
+  }
+
   //=============================================================================
 
   private isValidStatusTransition(

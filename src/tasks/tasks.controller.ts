@@ -24,6 +24,7 @@ import { FindOneParams } from './find-one.params';
 import { UpdateTaskDto } from './update-task.dto';
 import { WrongTaskStatusException } from './exceptions/wrong-task-status.exception';
 import { Task } from './task.entity';
+import { CreateTaskLabelDto } from './create-task-label.dto';
 
 @ApiTags('Tasks API')
 @Controller('tasks')
@@ -74,6 +75,32 @@ export class TasksController {
       }
       throw error;
     }
+  }
+
+  @Post('/:id/labels')
+  @ApiOperation({ summary: 'Add labels to a task' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiBody({ type: CreateTaskLabelDto, isArray: true })
+  @ApiResponse({ status: 201, description: 'Labels added successfully' })
+  public async addLabels(
+    @Param() params: FindOneParams,
+    @Body() labels: CreateTaskLabelDto[],
+  ): Promise<Task> {
+    const task = await this.findOneOrFail(params.id);
+    return await this.tasksService.addLabels(task, labels);
+  }
+
+  @Delete('/:id/labels')
+  @ApiOperation({ summary: 'Delete labels from a task' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiBody({ type: CreateTaskLabelDto, isArray: true })
+  @ApiResponse({ status: 204, description: 'Labels deleted successfully' })
+  public async deleteLabels(
+    @Param() params: FindOneParams,
+    @Body() labels: CreateTaskLabelDto[],
+  ): Promise<void> {
+    const task = await this.findOneOrFail(params.id);
+    await this.tasksService.deleteLabels(task, labels);
   }
 
   @Delete('/:id')
