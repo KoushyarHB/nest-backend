@@ -1,6 +1,6 @@
 import { IsEnum, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { TaskStatus } from './task.model';
+import { TaskStatus } from '../enums/task-status.enum';
 
 export class UpdateTaskStatusDto {
   @ApiProperty({

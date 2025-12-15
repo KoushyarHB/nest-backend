@@ -8,14 +8,10 @@ import {
   IsArray,
   ValidateNested,
 } from 'class-validator';
-import { TaskStatus } from './task.model';
+import { TaskStatus } from '../enums/task-status.enum';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-
-class UpdateLabelDto {
-  @IsString()
-  name: string;
-}
+import { UpdateTaskLabelDto } from './update-task-label.dto';
 
 // export class UpdateTaskDto extends PartialType(CreateTaskDto) {}
 
@@ -26,13 +22,13 @@ export class UpdateTaskDto {
   @IsOptional() @IsUUID() userId?: string;
 
   @ApiPropertyOptional({
-    type: [UpdateLabelDto],
+    type: [UpdateTaskLabelDto],
     example: [{ name: 'course' }, { name: 'nestjs' }, { name: 'important' }],
     description: 'Array of labels (optional)',
   })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => UpdateLabelDto)
-  labels?: UpdateLabelDto[];
+  @Type(() => UpdateTaskLabelDto)
+  labels?: UpdateTaskLabelDto[];
 }

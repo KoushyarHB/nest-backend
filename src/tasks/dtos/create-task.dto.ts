@@ -8,7 +8,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TaskStatus } from './task.model';
+import { TaskStatus } from '../enums/task-status.enum';
 import { Type } from 'class-transformer';
 import { CreateTaskLabelDto } from './create-task-label.dto';
 

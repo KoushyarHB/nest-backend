@@ -11,9 +11,9 @@ import { appConfigSchema } from './config/config.types';
 import { typeOrmConfig } from './config/database.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypedConfigService } from './config/typed-config.service';
-import { Task } from './tasks/task.entity';
+import { Task } from './tasks/entities/task.entity';
 import { User } from './users/user.entity';
-import { TaskLabel } from './tasks/task-label.entity';
+import { TaskLabel } from './tasks/entities/task-label.entity';
 
 @Module({
   imports: [

@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,14 +18,19 @@ import {
   ApiResponse,
   ApiParam,
   ApiBody,
+  ApiQuery,
+  ApiExtraModels,
 } from '@nestjs/swagger';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto } from './create-task.dto';
-import { FindOneParams } from './find-one.params';
-import { UpdateTaskDto } from './update-task.dto';
+import { CreateTaskDto } from './dtos/create-task.dto';
+import { FindOneParams } from './dtos/find-one.params';
+import { UpdateTaskDto } from './dtos/update-task.dto';
 import { WrongTaskStatusException } from './exceptions/wrong-task-status.exception';
-import { Task } from './task.entity';
-import { CreateTaskLabelDto } from './create-task-label.dto';
+import { Task } from './entities/task.entity';
+import { CreateTaskLabelDto } from './dtos/create-task-label.dto';
+import { PaginatedResponse } from './dtos/paginated.response';
+import { FindTasksQueryDto } from './dtos/find-tasks-query.dto';
+import { TaskStatus } from './enums/task-status.enum';
 
 @ApiTags('Tasks API')
 @Controller('tasks')
@@ -32,10 +38,38 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
+  @ApiExtraModels(FindTasksQueryDto)
   @ApiOperation({ summary: 'Get all tasks' })
-  @ApiResponse({ status: 200, description: 'Returns all tasks' })
-  public async findAll(): Promise<Task[]> {
-    return await this.tasksService.findAll();
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+    example: 0,
+  })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    type: Number,
+    description: 'Page size (default: 10, max: 100)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: TaskStatus,
+    description: 'Filter tasks by status (optional)',
+    example: TaskStatus.IN_PROGRESS,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns paginated tasks',
+    type: PaginatedResponse<Task>,
+  })
+  public async findAll(
+    @Query() queryParams: FindTasksQueryDto,
+  ): Promise<PaginatedResponse<Task>> {
+    return await this.tasksService.findAll(queryParams);
   }
 
   @Get('/:id')

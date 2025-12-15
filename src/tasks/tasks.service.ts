@@ -1,14 +1,16 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { TaskStatus } from './task.model';
-import { CreateTaskDto } from './create-task.dto';
-import { UpdateTaskDto } from './update-task.dto';
+import { Injectable } from '@nestjs/common';
+import { TaskStatus } from './enums/task-status.enum';
+import { CreateTaskDto } from './dtos/create-task.dto';
+import { UpdateTaskDto } from './dtos/update-task.dto';
 import { WrongTaskStatusException } from './exceptions/wrong-task-status.exception';
-import { Repository, In } from 'typeorm';
-import { Task } from './task.entity';
+import { Repository } from 'typeorm';
+import { Task } from './entities/task.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/user.entity';
-import { TaskLabel } from './task-label.entity';
-import { CreateTaskLabelDto } from './create-task-label.dto';
+import { TaskLabel } from './entities/task-label.entity';
+import { CreateTaskLabelDto } from './dtos/create-task-label.dto';
+import { PaginatedResponse } from './dtos/paginated.response';
+import { FindTasksQueryDto } from './dtos/find-tasks-query.dto';
 
 @Injectable()
 export class TasksService {
@@ -19,8 +21,16 @@ export class TasksService {
     // private readonly usersRepository: Repository<User>,
   ) {}
 
-  async findAll(): Promise<Task[]> {
-    return await this.tasksRepository.find({ relations: ['user', 'labels'] });
+  async findAll(params: FindTasksQueryDto): Promise<PaginatedResponse<Task>> {
+    const { page = 1, pageSize = 10, status } = params;
+    const [items, totalItems] = await this.tasksRepository.findAndCount({
+      relations: ['user', 'labels'],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      where: status ? { status } : undefined,
+    });
+    const totalPages = Math.ceil(totalItems / pageSize);
+    return { totalItems, page, pageSize, totalPages, items };
   }
 
   async findOne(id: string): Promise<Task | null> {

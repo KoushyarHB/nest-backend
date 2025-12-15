@@ -5,7 +5,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { TaskStatus } from './task.model';
+import { TaskStatus } from '../enums/task-status.enum';
 import { User } from 'src/users/user.entity';
 import { TaskLabel } from './task-label.entity';
 
