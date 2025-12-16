@@ -3,7 +3,7 @@ import { TaskStatus } from './enums/task-status.enum';
 import { CreateTaskDto } from './dtos/create-task.dto';
 import { UpdateTaskDto } from './dtos/update-task.dto';
 import { WrongTaskStatusException } from './exceptions/wrong-task-status.exception';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/user.entity';
@@ -21,14 +21,87 @@ export class TasksService {
     // private readonly usersRepository: Repository<User>,
   ) {}
 
+  // async findAll(params: FindTasksQueryDto): Promise<PaginatedResponse<Task>> {
+  //   const { page = 1, pageSize = 10, status, search } = params;
+
+  //   // 1. Initialize an empty WHERE clause object
+  //   const where: FindOptionsWhere<Task> | FindOptionsWhere<Task>[] = {};
+
+  //   // 2. Add filtering by status if provided
+  //   if (status) {
+  //     where.status = status;
+  //   }
+
+  //   // 3. Add filtering by search if provided (This is the core lecture concept)
+  //   if (search) {
+  //     const [items, totalItems] = await this.tasksRepository.findAndCount({
+  //       relations: ['user', 'labels'],
+  //       skip: (page - 1) * pageSize,
+  //       take: pageSize,
+  //       where: [
+  //         { ...where, title: ILike(`%${search}%`) },
+  //         { ...where, description: ILike(`%${search}%`) },
+  //       ],
+  //     });
+
+  //     const totalPages = Math.ceil(totalItems / pageSize);
+  //     return { totalItems, page, pageSize, totalPages, items };
+  //   }
+
+  //   const [items, totalItems] = await this.tasksRepository.findAndCount({
+  //     relations: ['user', 'labels'],
+  //     skip: (page - 1) * pageSize,
+  //     take: pageSize,
+  //     where,
+  //   });
+
+  //   const totalPages = Math.ceil(totalItems / pageSize);
+
+  //   return { totalItems, page, pageSize, totalPages, items };
+  // }
+
+  // Search advanced implementation with query builder
   async findAll(params: FindTasksQueryDto): Promise<PaginatedResponse<Task>> {
-    const { page = 1, pageSize = 10, status } = params;
-    const [items, totalItems] = await this.tasksRepository.findAndCount({
-      relations: ['user', 'labels'],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      where: status ? { status } : undefined,
-    });
+    const { page = 1, pageSize = 10, status, search } = params;
+
+    // 1. Initialize the Query Builder
+    // 'task' is the alias used for the primary table (Task entity)
+    let query = this.tasksRepository.createQueryBuilder('task');
+
+    // 2. Load Relations (Equivalent to relations: ['user', 'labels'])
+    query = query
+      .leftJoinAndSelect('task.user', 'user')
+      .leftJoinAndSelect('task.labels', 'labels');
+
+    // 3. Apply Filtering (Status)
+    if (status) {
+      // WHERE condition using the alias 'task'
+      query = query.where('task.status = :status', { status });
+    }
+
+    // 4. Apply Advanced Search (LIKE Operator with OR condition)
+    if (search) {
+      // If we already have a WHERE (from status), we use AND, otherwise we use WHERE.
+      // Using a single variable for the method allows for flexibility.
+      const conditionMethod = status ? 'andWhere' : 'where';
+
+      // The Query Builder uses parameter binding for safety (:search)
+      query = query[conditionMethod](
+        // Use parenthesis to group the OR conditions correctly: (title LIKE ...) OR (description LIKE ...)
+        '(task.title ILIKE :search OR task.description ILIKE :search)',
+        // PostgreSQL's ILIKE is case-insensitive. We add '%' wildcards for partial match.
+        { search: `%${search}%` },
+      );
+    }
+
+    // 5. Apply Pagination
+    const skip = (page - 1) * pageSize;
+    query = query.skip(skip).take(pageSize);
+
+    // 6. Execute the query and count
+    const [items, totalItems] = await query.getManyAndCount();
+
+    // 7. Format the response
     const totalPages = Math.ceil(totalItems / pageSize);
     return { totalItems, page, pageSize, totalPages, items };
   }

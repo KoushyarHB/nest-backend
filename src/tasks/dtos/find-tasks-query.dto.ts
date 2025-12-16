@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, Max, Min, IsEnum } from 'class-validator';
+import { IsInt, IsOptional, Max, Min, IsEnum, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TaskStatus } from '../enums/task-status.enum';
 
@@ -33,4 +33,12 @@ export class FindTasksQueryDto {
   @IsOptional()
   @IsEnum(TaskStatus)
   status?: TaskStatus;
+
+  @ApiPropertyOptional({
+    description: 'Text to search in task title or description',
+    example: 'important',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

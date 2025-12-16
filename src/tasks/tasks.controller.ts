@@ -45,7 +45,7 @@ export class TasksController {
     required: false,
     type: Number,
     description: 'Page number (default: 1)',
-    example: 0,
+    example: 1,
   })
   @ApiQuery({
     name: 'pageSize',
@@ -60,6 +60,12 @@ export class TasksController {
     enum: TaskStatus,
     description: 'Filter tasks by status (optional)',
     example: TaskStatus.IN_PROGRESS,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Text to search in task title or description',
+    example: 'important',
   })
   @ApiResponse({
     status: 200,
