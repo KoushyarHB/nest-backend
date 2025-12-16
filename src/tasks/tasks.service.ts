@@ -64,46 +64,100 @@ export class TasksService {
   async findAll(params: FindTasksQueryDto): Promise<PaginatedResponse<Task>> {
     const { page = 1, pageSize = 10, status, search } = params;
 
-    // 1. Initialize the Query Builder
-    // 'task' is the alias used for the primary table (Task entity)
-    let query = this.tasksRepository.createQueryBuilder('task');
+    const qb = this.tasksRepository.createQueryBuilder('task');
 
-    // 2. Load Relations (Equivalent to relations: ['user', 'labels'])
-    query = query
-      .leftJoinAndSelect('task.user', 'user')
-      .leftJoinAndSelect('task.labels', 'labels');
+    qb.leftJoinAndSelect('task.user', 'user').leftJoinAndSelect(
+      'task.labels',
+      'labels',
+    );
 
-    // 3. Apply Filtering (Status)
     if (status) {
-      // WHERE condition using the alias 'task'
-      query = query.where('task.status = :status', { status });
+      qb.where('task.status = :status', { status });
     }
 
-    // 4. Apply Advanced Search (LIKE Operator with OR condition)
     if (search) {
-      // If we already have a WHERE (from status), we use AND, otherwise we use WHERE.
-      // Using a single variable for the method allows for flexibility.
       const conditionMethod = status ? 'andWhere' : 'where';
-
-      // The Query Builder uses parameter binding for safety (:search)
-      query = query[conditionMethod](
-        // Use parenthesis to group the OR conditions correctly: (title LIKE ...) OR (description LIKE ...)
+      qb[conditionMethod](
         '(task.title ILIKE :search OR task.description ILIKE :search)',
-        // PostgreSQL's ILIKE is case-insensitive. We add '%' wildcards for partial match.
         { search: `%${search}%` },
       );
     }
 
-    // 5. Apply Pagination
     const skip = (page - 1) * pageSize;
-    query = query.skip(skip).take(pageSize);
-
-    // 6. Execute the query and count
-    const [items, totalItems] = await query.getManyAndCount();
-
-    // 7. Format the response
+    qb.skip(skip).take(pageSize);
+    const [items, totalItems] = await qb.getManyAndCount();
     const totalPages = Math.ceil(totalItems / pageSize);
     return { totalItems, page, pageSize, totalPages, items };
+  }
+
+  async testLabelFiltering() {
+    console.log('=== Testing label filtering ===');
+
+    // 1. Exact match with find() – works, but only loads matching labels
+    const exact = await this.tasksRepository.find({
+      where: { labels: { name: 'nestjs' } },
+      relations: ['labels'],
+    });
+    console.log(`Exact match "nestjs" (find()): ${exact.length} tasks`);
+    exact.forEach((t) =>
+      console.log(`  Task ${t.id}: ${t.labels.length} labels loaded`),
+    );
+
+    // 2. Partial match with find() – works, but filters children (only matching labels loaded)
+    const partialFind = await this.tasksRepository.find({
+      where: { labels: { name: ILike('%nest%') } },
+      relations: ['labels'],
+    });
+    console.log(`Partial match "%nest%" (find()): ${partialFind.length} tasks`);
+    partialFind.forEach((t) =>
+      console.log(
+        `  Task ${t.id}: ${t.labels.length} labels loaded (only matching ones)`,
+      ),
+    );
+
+    // 3. Multiple labels OR – impossible with simple find() where
+    try {
+      await this.tasksRepository.find({
+        where: { labels: [{ name: 'nestjs' }, { name: 'grok' }] },
+        relations: ['labels'],
+      });
+      console.log('Multiple labels OR unexpectedly worked');
+    } catch (error) {
+      console.log(
+        'Multiple labels OR filter: Not supported (error expected) — correct',
+      );
+    }
+
+    // 4. Query Builder – loads ALL labels + filters tasks correctly
+    const qb = this.tasksRepository
+      .createQueryBuilder('task')
+      .leftJoinAndSelect('task.labels', 'label');
+
+    // Filter tasks that have at least one label matching '%nest%'
+    qb.andWhere(
+      `EXISTS (
+      SELECT 1 FROM task_label sub_label
+      WHERE sub_label."taskId" = task.id
+      AND LOWER(sub_label.name) LIKE LOWER(:search)
+    )`,
+      { search: '%nest%' },
+    );
+
+    const qbResult = await qb.getMany();
+    console.log(
+      `Query Builder "%nest%" (all labels loaded): ${qbResult.length} tasks`,
+    );
+    qbResult.forEach((t) =>
+      console.log(
+        `  Task ${t.id}: ${t.labels.length} labels loaded (ALL labels)`,
+      ),
+    );
+
+    return {
+      exact,
+      partialFind,
+      qbResult,
+    };
   }
 
   async findOne(id: string): Promise<Task | null> {

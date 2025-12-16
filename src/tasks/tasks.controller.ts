@@ -37,6 +37,11 @@ import { TaskStatus } from './enums/task-status.enum';
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
+  @Get('test-labels')
+  async testLabels() {
+    return this.tasksService.testLabelFiltering();
+  }
+
   @Get()
   @ApiExtraModels(FindTasksQueryDto)
   @ApiOperation({ summary: 'Get all tasks' })
