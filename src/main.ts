@@ -7,13 +7,21 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
+  // // Log the JWT Secret for debugging
+  // const config = app.get(ConfigService);
+  // console.log(
+  //   'JWT Secret (first 10 chars):',
+  //   (config.get('auth.secret') as string)?.slice(0, 10),
+  // );
+  // console.log('JWT Expires:', config.get('auth.expiresIn'));
+
   // Swagger setup
-  const config = new DocumentBuilder()
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('Tasks API')
     .setDescription('The Tasks API documentation')
     .setVersion('1.0')
     .build();
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, document);
 
   await app.listen(process.env.PORT ?? 3000);

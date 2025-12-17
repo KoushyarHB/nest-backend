@@ -6,7 +6,7 @@ import { WrongTaskStatusException } from './exceptions/wrong-task-status.excepti
 import { FindOptionsWhere, ILike, Repository } from 'typeorm';
 import { Task } from './entities/task.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from 'src/users/user.entity';
+import { User } from 'src/users/entities/user.entity';
 import { TaskLabel } from './entities/task-label.entity';
 import { CreateTaskLabelDto } from './dtos/create-task-label.dto';
 import { PaginatedResponse } from './dtos/paginated.response';

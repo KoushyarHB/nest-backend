@@ -12,8 +12,11 @@ import { typeOrmConfig } from './config/database.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TypedConfigService } from './config/typed-config.service';
 import { Task } from './tasks/entities/task.entity';
-import { User } from './users/user.entity';
+import { User } from './users/entities/user.entity';
 import { TaskLabel } from './tasks/entities/task-label.entity';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import authConfig from './config/auth.config';
 
 @Module({
   imports: [
@@ -26,13 +29,15 @@ import { TaskLabel } from './tasks/entities/task-label.entity';
       }),
     }),
     ConfigModule.forRoot({
-      load: [appConfig, typeOrmConfig],
+      load: [appConfig, typeOrmConfig, authConfig],
       validationSchema: appConfigSchema,
       validationOptions: {
         abortEarly: true,
       },
     }),
     TasksModule,
+    AuthModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [
