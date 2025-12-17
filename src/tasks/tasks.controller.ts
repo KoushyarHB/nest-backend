@@ -29,7 +29,11 @@ import { WrongTaskStatusException } from './exceptions/wrong-task-status.excepti
 import { Task } from './entities/task.entity';
 import { CreateTaskLabelDto } from './dtos/create-task-label.dto';
 import { PaginatedResponse } from './dtos/paginated.response';
-import { FindTasksQueryDto } from './dtos/find-tasks-query.dto';
+import {
+  FindTasksQueryDto,
+  sortableFields,
+  sortOrder,
+} from './dtos/find-tasks-query.dto';
 import { TaskStatus } from './enums/task-status.enum';
 
 @ApiTags('Tasks API')
@@ -76,6 +80,20 @@ export class TasksController {
     status: 200,
     description: 'Returns paginated tasks',
     type: PaginatedResponse<Task>,
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    enum: sortableFields,
+    description: 'Field to sort by',
+    example: 'title',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    required: false,
+    enum: sortOrder,
+    description: 'Sort order',
+    example: 'DESC',
   })
   public async findAll(
     @Query() queryParams: FindTasksQueryDto,

@@ -62,14 +62,20 @@ export class TasksService {
 
   // Search advanced implementation with query builder
   async findAll(params: FindTasksQueryDto): Promise<PaginatedResponse<Task>> {
-    const { page = 1, pageSize = 10, status, search } = params;
+    const {
+      page = 1,
+      pageSize = 10,
+      status,
+      search,
+      labels,
+      sortBy,
+      sortOrder = 'ASC',
+    } = params;
 
     const qb = this.tasksRepository.createQueryBuilder('task');
 
-    qb.leftJoinAndSelect('task.user', 'user').leftJoinAndSelect(
-      'task.labels',
-      'labels',
-    );
+    qb.leftJoinAndSelect('task.user', 'user');
+    qb.leftJoinAndSelect('task.labels', 'label');
 
     if (status) {
       qb.where('task.status = :status', { status });
@@ -81,6 +87,29 @@ export class TasksService {
         '(task.title ILIKE :search OR task.description ILIKE :search)',
         { search: `%${search}%` },
       );
+    }
+
+    if (labels) {
+      const labelNames = labels.split(',').map((l) => l.trim());
+      // Lecture 6-6: using IN clause
+      // if (labelNames.length > 0) {
+      //   qb.andWhere('LOWER(label.name) IN (:...labelNames)', { labelNames });
+      // }
+      // Lecture 6-7: using EXISTS clause
+      qb.andWhere(
+        `EXISTS (
+        SELECT 1 FROM task_label sub
+        WHERE sub."taskId" = task.id
+        AND LOWER(sub.name) IN (:...labelNames)
+      )`,
+        { labelNames },
+      );
+    }
+
+    if (sortBy) {
+      qb.orderBy(`task.${sortBy}`, sortOrder);
+    } else {
+      qb.orderBy('task.createdAt', 'ASC');
     }
 
     const skip = (page - 1) * pageSize;
