@@ -9,8 +9,15 @@ export class UserService {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
   ) {}
+
   public async create(user: User) {
-    console.log(user);
     return await this.usersRepository.save(user);
+  }
+
+  public async getUsers() {
+    const [users, totalUsers] = await this.usersRepository.findAndCount({
+      relations: ['tasks'],
+    });
+    return { users, totalUsers };
   }
 }

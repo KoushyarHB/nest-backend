@@ -16,6 +16,7 @@ import { User } from './users/entities/user.entity';
 import { TaskLabel } from './tasks/entities/task-label.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { PasswordService } from './auth/password/password.service';
 import authConfig from './config/auth.config';
 
 @Module({
@@ -46,6 +47,7 @@ import authConfig from './config/auth.config';
     MessageFormatterService,
     LoggerService,
     { provide: TypedConfigService, useExisting: ConfigService },
+    PasswordService,
   ],
 })
 export class AppModule {}

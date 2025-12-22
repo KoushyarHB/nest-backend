@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { PasswordService } from './password/password.service';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AuthService } from './auth.service';
   ],
   controllers: [AuthController],
   providers: [
+    PasswordService,
     AuthService,
     {
       provide: 'JWT_CONFIG_TEST',
